@@ -122,6 +122,12 @@ def gen_binana_h(data, header, depjson):
             if discourage:
                 defines["SUCCESS_OPCODES"].append(f'    if (auto e = op_success_check(flags, SCRIPT_VERIFY_{dep}, SCRIPT_VERIFY_DISCOURAGE_{dep}, SCRIPT_ERR_DISCOURAGE_{dep}, serror)) return e; else break;')
 
+        if "errors" in b:
+            for errname, errmsg in b["errors"].items():
+                defines["SCRIPTERR"].append(f'SCRIPT_ERR_{errname},')
+                defines["SCRIPTERR_STRING"].append(f'case SCRIPT_ERR_{errname}: return "{errmsg}";')
+                defines["SCRIPTERR_TEST_NAMES"].append(f'{{ SCRIPT_ERR_{errname}, "{errname}" }},')
+
     header.write("// Automatically generated\n")
     header.write("#ifndef BINANA_H\n")
     header.write("#define BINANA_H\n\n")

@@ -1,0 +1,12 @@
+{
+    "binana": [2026, 6, 0],
+    "deployment": "EC_OPS",
+    "scriptverify": true,
+    "scriptverify_discourage": true,
+    "opcodes": {
+        "EC_POINT_ADD": "0xbb"
+    },
+    "errors": {
+        "EC_POINT_ADD": "Invalid points for EC point addition"
+  }
+}

@@ -1377,6 +1377,34 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     break;
                 }
 
+                case OP_EC_POINT_ADD:
+                {
+                    // OP_EC_POINT_ADD is only available in Tapscript
+                    if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
+
+                    assert(execdata.m_validation_weight_left_init);
+                    execdata.m_validation_weight_left -= VALIDATION_WEIGHT_EC_POINT_ADD;
+                    if (execdata.m_validation_weight_left < 0) {
+                        return set_error(serror, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT);
+                    }
+                    if (stack.size() < 2) return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                    const valtype& vch1 = stacktop(-2);
+                    const valtype& vch2 = stacktop(-1);
+                    CPubKey p1(vch1);
+                    CPubKey p2(vch2);
+
+                    CPubKey pSum;
+                    if (!p1.ComputeSum(p2, pSum)) {
+                        return set_error(serror, SCRIPT_ERR_EC_POINT_ADD);
+                    }
+
+                    popstack(stack);
+                    popstack(stack);
+                    stack.emplace_back(pSum.begin(), pSum.end());
+                }
+                break;
+
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
             }
