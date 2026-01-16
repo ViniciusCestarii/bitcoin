@@ -184,6 +184,12 @@ int ecdsa_signature_parse_der_lax(secp256k1_ecdsa_signature* sig, const unsigned
     return 1;
 }
 
+bool parse_ec_point(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) {
+    if (inputlen != CPubKey::COMPRESSED_SIZE)
+        return false;
+    return secp256k1_ec_pubkey_parse(secp256k1_context_static, pubkey, input, inputlen);
+}
+
 /** Nothing Up My Sleeve (NUMS) point
  *
  *  NUMS_H is a point with an unknown discrete logarithm, constructed by taking the sha256 of 'g'
@@ -359,6 +365,31 @@ bool CPubKey::Derive(CPubKey& pubkeyChild, ChainCode &ccChild, unsigned int nChi
     size_t publen = COMPRESSED_SIZE;
     secp256k1_ec_pubkey_serialize(secp256k1_context_static, pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED);
     pubkeyChild.Set(pub, pub + publen);
+    return true;
+}
+
+bool CPubKey::ComputeSum(const CPubKey& other, CPubKey& ret) const {
+    secp256k1_pubkey pubkey1, pubkey2;
+    if (!parse_ec_point(&pubkey1, vch, size())) {
+        return false;
+    }
+    if (!parse_ec_point(&pubkey2, other.vch, other.size())) {
+        return false;
+    }
+    const secp256k1_pubkey* pubkeys[2];
+    pubkeys[0] = &pubkey1;
+    pubkeys[1] = &pubkey2;
+    secp256k1_pubkey pubkey_sum;
+    if (!secp256k1_ec_pubkey_combine(secp256k1_context_static, &pubkey_sum, pubkeys, 2)) {
+        /* The sum is Infinity. Set to an empty vector */
+        unsigned char empty[1];
+        ret.Set(empty, empty);
+        return true;
+    }
+    unsigned char out[COMPRESSED_SIZE];
+    size_t outlen = COMPRESSED_SIZE;
+    secp256k1_ec_pubkey_serialize(secp256k1_context_static, out, &outlen, &pubkey_sum, SECP256K1_EC_COMPRESSED);
+    ret.Set(out, out + outlen);
     return true;
 }
 

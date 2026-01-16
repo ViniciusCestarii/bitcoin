@@ -60,6 +60,9 @@ static constexpr unsigned int ANNEX_TAG = 0x50;
 // Validation weight per passing signature (Tapscript only, see BIP 342).
 static constexpr int64_t VALIDATION_WEIGHT_PER_SIGOP_PASSED{50};
 
+// Validation weight cost for OP_EC_POINT_ADD (Tapscript only, see BIP ???).
+static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_ADD{10};
+
 // How much weight budget is added to the witness size (Tapscript only, see BIP 342).
 static constexpr int64_t VALIDATION_WEIGHT_OFFSET{50};
 
@@ -208,6 +211,9 @@ enum opcodetype
 
     // Opcode added by BIP 342 (Tapscript)
     OP_CHECKSIGADD = 0xba,
+
+    // Opcode added by BIP ??? (Elliptic Curve Operations)
+    OP_EC_POINT_ADD = 0xbb,
 
     OP_INVALIDOPCODE = 0xff,
 };

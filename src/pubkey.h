@@ -221,6 +221,9 @@ public:
 
     //! Derive BIP32 child pubkey.
     [[nodiscard]] bool Derive(CPubKey& pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc, uint256* bip32_tweak_out = nullptr) const;
+
+    // Compute the sum of this point and another point
+    bool ComputeSum(const CPubKey& other, CPubKey& ret) const;
 };
 
 class XOnlyPubKey
