@@ -1294,6 +1294,31 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                 }
                 break;
 
+                case OP_EC_POINT_X_COORD:
+                {
+                    // OP_EC_POINT_X_COORD is only available in Tapscript
+                    if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
+
+                    assert(execdata.m_validation_weight_left_init);
+                    execdata.m_validation_weight_left -= VALIDATION_WEIGHT_EC_POINT_X_COORD;
+                    if (execdata.m_validation_weight_left < 0) {
+                        return set_error(serror, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT);
+                    }
+                    if (stack.size() < 1) return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                    const valtype& vch = stacktop(-1);
+                    CPubKey p(vch);
+
+                    valtype x;
+                    if (!p.GetX(x)) {
+                        return set_error(serror, SCRIPT_ERR_EC_POINT_X_COORD);
+                    }
+
+                    popstack(stack);
+                    stack.emplace_back(x.begin(), x.end());
+                }
+                break;
+
                 default:
                     return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
             }

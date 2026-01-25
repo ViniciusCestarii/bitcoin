@@ -231,6 +231,9 @@ public:
 
     // Compute the negation of this point
     bool Negate(CPubKey& ret) const;
+
+    // Get the x-coordinate of this point
+    bool GetX(valtype& ret) const;
 };
 
 class XOnlyPubKey

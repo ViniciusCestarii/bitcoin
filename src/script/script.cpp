@@ -153,6 +153,7 @@ std::string GetOpName(opcodetype opcode)
     case OP_EC_POINT_ADD           : return "OP_EC_POINT_ADD";
     case OP_EC_POINT_MUL           : return "OP_EC_POINT_MUL";
     case OP_EC_POINT_NEGATE        : return "OP_EC_POINT_NEGATE";
+    case OP_EC_POINT_X_COORD       : return "OP_EC_POINT_X_COORD";
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
