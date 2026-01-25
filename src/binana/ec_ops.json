@@ -7,6 +7,6 @@
         "EC_POINT_ADD": "0xbb"
     },
     "errors": {
-        "EC_POINT_ADD": "Invalid points for EC point addition"
+        "EC_POINT_ADD": "Using OP_EC_POINT_ADD to sum invalid points"
   }
 }

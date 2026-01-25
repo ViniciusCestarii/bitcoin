@@ -7,7 +7,7 @@ project(libsecp256k1
   # The package (a.k.a. release) version is based on semantic versioning 2.0.0 of
   # the API. All changes in experimental modules are treated as
   # backwards-compatible and therefore at most increase the minor version.
-  VERSION 0.6.0
+  VERSION 0.6.1
   DESCRIPTION "Optimized C library for ECDSA signatures and secret/public key operations on curve secp256k1."
   HOMEPAGE_URL "https://github.com/bitcoin-core/secp256k1"
   LANGUAGES C
@@ -32,7 +32,7 @@ endif()
 # All changes in experimental modules are treated as if they don't affect the
 # interface and therefore only increase the revision.
 set(${PROJECT_NAME}_LIB_VERSION_CURRENT 5)
-set(${PROJECT_NAME}_LIB_VERSION_REVISION 0)
+set(${PROJECT_NAME}_LIB_VERSION_REVISION 1)
 set(${PROJECT_NAME}_LIB_VERSION_AGE 0)
 
 #=============================
@@ -62,6 +62,45 @@ option(SECP256K1_ENABLE_MODULE_EXTRAKEYS "Enable extrakeys module." ON)
 option(SECP256K1_ENABLE_MODULE_SCHNORRSIG "Enable schnorrsig module." ON)
 option(SECP256K1_ENABLE_MODULE_MUSIG "Enable musig module." ON)
 option(SECP256K1_ENABLE_MODULE_ELLSWIFT "Enable ElligatorSwift module." ON)
+option(SECP256K1_ENABLE_MODULE_HAZMAT "Enable hazmat module." OFF)
+
+# Processing must be done in a topological sorting of the dependency graph
+# (dependent module first).
+if(SECP256K1_ENABLE_MODULE_HAZMAT)
+    add_compile_definitions(ENABLE_MODULE_HAZMAT=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_ELLSWIFT)
+  add_compile_definitions(ENABLE_MODULE_ELLSWIFT=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_MUSIG)
+  if(DEFINED SECP256K1_ENABLE_MODULE_SCHNORRSIG AND NOT SECP256K1_ENABLE_MODULE_SCHNORRSIG)
+    message(FATAL_ERROR "Module dependency error: You have disabled the schnorrsig module explicitly, but it is required by the musig module.")
+  endif()
+  set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
+  add_compile_definitions(ENABLE_MODULE_MUSIG=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_SCHNORRSIG)
+  if(DEFINED SECP256K1_ENABLE_MODULE_EXTRAKEYS AND NOT SECP256K1_ENABLE_MODULE_EXTRAKEYS)
+    message(FATAL_ERROR "Module dependency error: You have disabled the extrakeys module explicitly, but it is required by the schnorrsig module.")
+  endif()
+  set(SECP256K1_ENABLE_MODULE_EXTRAKEYS ON)
+  add_compile_definitions(ENABLE_MODULE_SCHNORRSIG=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_EXTRAKEYS)
+  add_compile_definitions(ENABLE_MODULE_EXTRAKEYS=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_RECOVERY)
+  add_compile_definitions(ENABLE_MODULE_RECOVERY=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_ECDH)
+  add_compile_definitions(ENABLE_MODULE_ECDH=1)
+endif()
 
 # Processing must be done in a topological sorting of the dependency graph
 # (dependent module first).
@@ -327,6 +366,7 @@ message("  extrakeys ........................... ${SECP256K1_ENABLE_MODULE_EXTRA
 message("  schnorrsig .......................... ${SECP256K1_ENABLE_MODULE_SCHNORRSIG}")
 message("  musig ............................... ${SECP256K1_ENABLE_MODULE_MUSIG}")
 message("  ElligatorSwift ...................... ${SECP256K1_ENABLE_MODULE_ELLSWIFT}")
+message("  hazmat .............................. ${SECP256K1_ENABLE_MODULE_HAZMAT}")
 message("Parameters:")
 message("  ecmult window size .................. ${SECP256K1_ECMULT_WINDOW_SIZE}")
 message("  ecmult gen table size ............... ${SECP256K1_ECMULT_GEN_KB} KiB")
