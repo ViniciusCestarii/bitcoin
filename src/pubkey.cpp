@@ -438,6 +438,24 @@ bool CPubKey::ComputeMul(const valtype& scalar, CPubKey& ret) const {
     return true;
 }
 
+bool CPubKey::Negate(CPubKey& ret) const {
+    if (size() == 0) {
+        /* The negation of Infinity is Infinity. Set to an empty vector */
+        unsigned char empty[1];
+        ret.Set(empty, empty);
+        return true;
+    }
+    secp256k1_pubkey pubkey;
+    if (!parse_ec_point(&pubkey, vch, size()))
+        return false;
+    std::ignore = secp256k1_ec_pubkey_negate(secp256k1_context_static, &pubkey);
+    unsigned char out[COMPRESSED_SIZE];
+    size_t outlen = COMPRESSED_SIZE;
+    secp256k1_ec_pubkey_serialize(secp256k1_context_static, out, &outlen, &pubkey, SECP256K1_EC_COMPRESSED);
+    ret.Set(out, out + outlen);
+    return true;
+}
+
 EllSwiftPubKey::EllSwiftPubKey(std::span<const std::byte> ellswift) noexcept
 {
     assert(ellswift.size() == SIZE);

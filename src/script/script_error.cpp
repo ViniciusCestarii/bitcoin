@@ -121,6 +121,8 @@ std::string ScriptErrorString(const ScriptError serror)
             return "Using OP_EC_POINT_ADD to sum invalid points";
         case SCRIPT_ERR_EC_POINT_MUL:
             return "Using OP_EC_POINT_MUL with invalid scalar or point";
+        case SCRIPT_ERR_EC_POINT_NEGATE:
+            return "Using OP_EC_POINT_NEGATE with invalid point";
         case SCRIPT_ERR_UNKNOWN_ERROR:
         case SCRIPT_ERR_ERROR_COUNT:
         default: break;

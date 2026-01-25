@@ -66,6 +66,8 @@ static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_ADD{10};
 // Validation weight cost for OP_EC_POINT_MUL (Tapscript only, see BIP ???).
 static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_MUL{30};
 
+static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_NEGATE{5};
+
 // How much weight budget is added to the witness size (Tapscript only, see BIP 342).
 static constexpr int64_t VALIDATION_WEIGHT_OFFSET{50};
 
@@ -218,6 +220,7 @@ enum opcodetype
     // Opcode added by BIP ??? (Elliptic Curve Operations)
     OP_EC_POINT_ADD = 0xbb,
     OP_EC_POINT_MUL = 0xbc,
+    OP_EC_POINT_NEGATE = 0xbd,
 
     OP_INVALIDOPCODE = 0xff,
 };
