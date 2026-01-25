@@ -453,6 +453,17 @@ bool CPubKey::Negate(CPubKey& ret) const {
     return true;
 }
 
+bool CPubKey::GetX(valtype& ret) const {
+    secp256k1_pubkey pubkey;
+    if (!parse_ec_point(&pubkey, vch, size()))
+        return false;
+    unsigned char point[COMPRESSED_SIZE];
+    size_t pointlen = COMPRESSED_SIZE;
+    secp256k1_ec_pubkey_serialize(secp256k1_context_static, point, &pointlen, &pubkey, SECP256K1_EC_COMPRESSED);
+    ret.assign(point + 1, point + pointlen);
+    return true;
+}
+
 CPubKey EllSwiftPubKey::Decode() const
 {
     secp256k1_pubkey pubkey;

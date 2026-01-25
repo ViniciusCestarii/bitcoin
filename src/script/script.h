@@ -69,6 +69,8 @@ static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_MUL{30};
 
 static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_NEGATE{5};
 
+static constexpr int64_t VALIDATION_WEIGHT_EC_POINT_X_COORD{1};
+
 // How much weight budget is added to the witness size (Tapscript only, see BIP 342).
 static constexpr int64_t VALIDATION_WEIGHT_OFFSET{50};
 
