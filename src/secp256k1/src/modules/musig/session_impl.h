@@ -385,17 +385,16 @@ static void secp256k1_nonce_function_musig(secp256k1_scalar *k, const unsigned c
         secp256k1_scalar_set_b32(&k[i], buf, NULL);
 
         /* Attempt to erase secret data */
-        secp256k1_memclear_explicit(buf, sizeof(buf));
+        secp256k1_memclear(buf, sizeof(buf));
         secp256k1_sha256_clear(&sha_tmp);
     }
-    secp256k1_memclear_explicit(rand, sizeof(rand));
+    secp256k1_memclear(rand, sizeof(rand));
     secp256k1_sha256_clear(&sha);
 }
 
 static int secp256k1_musig_nonce_gen_internal(const secp256k1_context* ctx, secp256k1_musig_secnonce *secnonce, secp256k1_musig_pubnonce *pubnonce, const unsigned char *input_nonce, const unsigned char *seckey, const secp256k1_pubkey *pubkey, const unsigned char *msg32, const secp256k1_musig_keyagg_cache *keyagg_cache, const unsigned char *extra_input32) {
     secp256k1_scalar k[2];
     secp256k1_ge nonce_pts[2];
-    secp256k1_gej nonce_ptj[2];
     int i;
     unsigned char pk_ser[33];
     size_t pk_ser_len = sizeof(pk_ser);
@@ -445,20 +444,13 @@ static int secp256k1_musig_nonce_gen_internal(const secp256k1_context* ctx, secp
     secp256k1_musig_secnonce_save(secnonce, k, &pk);
     secp256k1_musig_secnonce_invalidate(ctx, secnonce, !ret);
 
-    /* Compute pubnonce as two gejs */
     for (i = 0; i < 2; i++) {
-        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &nonce_ptj[i], &k[i]);
-        secp256k1_scalar_clear(&k[i]);
-    }
-
-    /* Batch convert to two public ges */
-    secp256k1_ge_set_all_gej(nonce_pts, nonce_ptj, 2);
-    for (i = 0; i < 2; i++) {
-        secp256k1_gej_clear(&nonce_ptj[i]);
-    }
-
-    for (i = 0; i < 2; i++) {
+        secp256k1_gej nonce_ptj;
+        secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &nonce_ptj, &k[i]);
+        secp256k1_ge_set_gej(&nonce_pts[i], &nonce_ptj);
         secp256k1_declassify(ctx, &nonce_pts[i], sizeof(nonce_pts[i]));
+        secp256k1_scalar_clear(&k[i]);
+        secp256k1_gej_clear(&nonce_ptj);
     }
     /* None of the nonce_pts will be infinity because k != 0 with overwhelming
      * probability */
@@ -518,7 +510,7 @@ int secp256k1_musig_nonce_gen_counter(const secp256k1_context* ctx, secp256k1_mu
     if (!secp256k1_musig_nonce_gen_internal(ctx, secnonce, pubnonce, buf, seckey, &pubkey, msg32, keyagg_cache, extra_input32)) {
         return 0;
     }
-    secp256k1_memclear_explicit(seckey, sizeof(seckey));
+    secp256k1_memclear(seckey, sizeof(seckey));
     return 1;
 }
 
@@ -679,7 +671,7 @@ int secp256k1_musig_partial_sign(const secp256k1_context* ctx, secp256k1_musig_p
     ret = secp256k1_musig_secnonce_load(ctx, k, &pk, secnonce);
     /* Set nonce to zero to avoid nonce reuse. This will cause subsequent calls
      * of this function to fail */
-    secp256k1_memzero_explicit(secnonce, sizeof(*secnonce));
+    memset(secnonce, 0, sizeof(*secnonce));
     if (!ret) {
         secp256k1_musig_partial_sign_clear(&sk, k);
         return 0;
