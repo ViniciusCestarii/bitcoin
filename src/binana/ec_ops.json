@@ -5,10 +5,12 @@
     "scriptverify_discourage": true,
     "opcodes": {
         "EC_POINT_ADD": "0xbb",
-        "EC_POINT_MUL": "0xbc"
+        "EC_POINT_MUL": "0xbc",
+        "EC_POINT_NEGATE": "0xbd"
     },
     "errors": {
         "EC_POINT_ADD": "Using OP_EC_POINT_ADD to sum invalid points",
-        "EC_POINT_MUL": "Using OP_EC_POINT_MUL with invalid scalar or point"
+        "EC_POINT_MUL": "Using OP_EC_POINT_MUL with invalid scalar or point",
+        "EC_POINT_NEGATE": "Using OP_EC_POINT_NEGATE with invalid point"
   }
 }

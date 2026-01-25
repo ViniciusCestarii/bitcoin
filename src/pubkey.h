@@ -232,6 +232,9 @@ public:
 
     // Compute the multiplication of this point by a scalar
     bool ComputeMul(const valtype& scalar, CPubKey& ret) const;
+
+    // Compute the negation of this point
+    bool Negate(CPubKey& ret) const;
 };
 
 class XOnlyPubKey
