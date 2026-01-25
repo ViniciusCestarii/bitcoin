@@ -28,6 +28,7 @@ public:
 };
 
 typedef uint256 ChainCode;
+typedef std::vector<unsigned char> valtype;
 
 /** An encapsulated public key. */
 class CPubKey
@@ -228,6 +229,9 @@ public:
 
     // Compute the sum of this point and another point
     bool ComputeSum(const CPubKey& other, CPubKey& ret) const;
+
+    // Compute the multiplication of this point by a scalar
+    bool ComputeMul(const valtype& scalar, CPubKey& ret) const;
 };
 
 class XOnlyPubKey

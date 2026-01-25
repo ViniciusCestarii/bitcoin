@@ -133,4 +133,80 @@ BOOST_AUTO_TEST_CASE(test_ec_point_add_opcode_validation_weight_exceeded)
     BOOST_CHECK_EQUAL(err, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT);
 }
 
+BOOST_AUTO_TEST_CASE(test_ec_point_mul_opcode)
+{
+    ScriptExecutionData execdata;
+    execdata.m_validation_weight_left_init = true;
+    execdata.m_validation_weight_left = SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT;
+    ScriptError err;
+
+    std::vector<valtype> stack;
+
+    valtype scalar = ParseHex("0000000000000000000000000000000000000000000000000000000000005678");
+    valtype point = ParseHex("0337a4aef1f8423ca076e4b7d99a8cabff40ddb8231f2a9f01081f15d7fa65c1ba");
+
+    stack.push_back(scalar);
+    stack.push_back(point);
+
+    CScript script;
+    script << OP_EC_POINT_MUL;
+
+    BOOST_CHECK(EvalScript(stack, script, flags, BaseSignatureChecker(), SigVersion::TAPSCRIPT, execdata, &err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
+    BOOST_CHECK_EQUAL(stack.size(), 1);
+    BOOST_CHECK_EQUAL(stack[0].size(), 33);
+    valtype expected_mul = ParseHex("033fbd85b56bc16aed085f2d0799e18569783e4a9ecd256741f69a231fbfb8f084");
+    BOOST_CHECK_EQUAL(HexStr(stack[0]), HexStr(expected_mul));
+    BOOST_CHECK_EQUAL(execdata.m_validation_weight_left, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT - VALIDATION_WEIGHT_EC_POINT_MUL);
+}
+
+BOOST_AUTO_TEST_CASE(test_ec_point_mul_opcode_point_g)
+{
+    ScriptExecutionData execdata;
+    execdata.m_validation_weight_left_init = true;
+    execdata.m_validation_weight_left = SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT;
+    ScriptError err;
+
+    std::vector<valtype> stack;
+
+    valtype scalar = ParseHex("0000000000000000000000000000000000000000000000000000000000005678");
+    valtype point = ParseHex("");
+
+    stack.push_back(scalar);
+    stack.push_back(point);
+
+    CScript script;
+    script << OP_EC_POINT_MUL;
+
+    BOOST_CHECK(EvalScript(stack, script, flags, BaseSignatureChecker(), SigVersion::TAPSCRIPT, execdata, &err));
+    BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
+    BOOST_CHECK_EQUAL(stack.size(), 1);
+    BOOST_CHECK_EQUAL(stack[0].size(), 33);
+    valtype expected_mul = ParseHex("0236298306e869232f364a2daf2000a5b4e990bb249182d7b4ebe02065d8ca1a79");
+    BOOST_CHECK_EQUAL(HexStr(stack[0]), HexStr(expected_mul));
+    BOOST_CHECK_EQUAL(execdata.m_validation_weight_left, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT - VALIDATION_WEIGHT_EC_POINT_MUL);
+}
+
+BOOST_AUTO_TEST_CASE(test_ec_point_mul_opcode_validation_weight_exceeded)
+{
+    ScriptExecutionData execdata;
+    execdata.m_validation_weight_left_init = true;
+    execdata.m_validation_weight_left = SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT - (SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT - VALIDATION_WEIGHT_EC_POINT_MUL + 1);
+    ScriptError err;
+
+    std::vector<valtype> stack;
+
+    valtype scalar = ParseHex("0000000000000000000000000000000000000000000000000000000000005678");
+    valtype point = ParseHex("0337a4aef1f8423ca076e4b7d99a8cabff40ddb8231f2a9f01081f15d7fa65c1ba");
+
+    stack.push_back(scalar);
+    stack.push_back(point);
+
+    CScript script;
+    script << OP_EC_POINT_MUL;
+
+    BOOST_CHECK(!EvalScript(stack, script, flags, BaseSignatureChecker(), SigVersion::TAPSCRIPT, execdata, &err));
+    BOOST_CHECK_EQUAL(err, SCRIPT_ERR_TAPSCRIPT_VALIDATION_WEIGHT);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
