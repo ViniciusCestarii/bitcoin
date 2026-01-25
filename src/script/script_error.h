@@ -85,6 +85,7 @@ typedef enum ScriptError_t
 
     /* Elliptic Curve Operations */
     SCRIPT_ERR_EC_POINT_ADD,
+    SCRIPT_ERR_EC_POINT_MUL,
 
     SCRIPT_ERR_ERROR_COUNT
 } ScriptError;

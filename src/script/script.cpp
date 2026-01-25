@@ -151,6 +151,7 @@ std::string GetOpName(opcodetype opcode)
 
     // Opcode added by BIP ??? (Elliptic Curve Operations)
     case OP_EC_POINT_ADD           : return "OP_EC_POINT_ADD";
+    case OP_EC_POINT_MUL           : return "OP_EC_POINT_MUL";
 
     case OP_INVALIDOPCODE          : return "OP_INVALIDOPCODE";
 
