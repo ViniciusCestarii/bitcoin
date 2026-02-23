@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <script/verify_flags.h>
 
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
@@ -615,7 +616,7 @@ public:
 };
 
 /** Test for OP_SUCCESSx opcodes as defined by BIP342. */
-bool IsOpSuccess(const opcodetype& opcode);
+bool IsOpSuccess(const opcodetype& opcode, script_verify_flags flags = 0);
 
 bool CheckMinimalPush(const std::vector<unsigned char>& data, opcodetype opcode);
 

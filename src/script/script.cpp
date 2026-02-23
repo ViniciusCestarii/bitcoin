@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/script.h>
+#include <script/interpreter.h>
 
 #include <crypto/common.h>
 #include <crypto/hex_base.h>
@@ -368,8 +369,10 @@ bool GetScriptOp(CScriptBase::const_iterator& pc, CScriptBase::const_iterator en
     return true;
 }
 
-bool IsOpSuccess(const opcodetype& opcode)
+bool IsOpSuccess(const opcodetype& opcode, script_verify_flags flags)
 {
+    if ((flags & SCRIPT_VERIFY_EC_OPS) && opcode >= OP_EC_POINT_ADD && opcode <= OP_EC_POINT_X_COORD) return false;
+
     return opcode == 80 || opcode == 98 || (opcode >= 126 && opcode <= 129) ||
            (opcode >= 131 && opcode <= 134) || (opcode >= 137 && opcode <= 138) ||
            (opcode >= 141 && opcode <= 142) || (opcode >= 149 && opcode <= 153) ||
