@@ -238,6 +238,11 @@ BOOST_AUTO_TEST_CASE(tx_valid)
 
             // Check that flags are maximal: transaction should fail if any unset flags are set.
             for (auto flags_excluding_one : ExcludeIndividualFlags(verify_flags)) {
+                const auto excluded_flag = verify_flags & ~flags_excluding_one;
+                // DISCOURAGE_OP_SUCCESS and EC_OPS are never maximal by design:
+                // OP_SUCCESS opcodes make scripts trivially valid without DISCOURAGE_OP_SUCCESS
+                if (excluded_flag == SCRIPT_VERIFY_EC_OPS) continue;
+                if (excluded_flag == SCRIPT_VERIFY_DISCOURAGE_OP_SUCCESS) continue;
                 if (!CheckTxScripts(tx, mapprevOutScriptPubKeys, mapprevOutValues, ~flags_excluding_one, txdata, strTest, /*expect_valid=*/false)) {
                     BOOST_ERROR("Too many flags unset: " << strTest);
                 }
