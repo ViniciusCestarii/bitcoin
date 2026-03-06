@@ -954,6 +954,18 @@ public:
     const NodeContext& m_node;
 };
 
+class TxCollectionImpl : public interfaces::TxCollection
+{
+public:
+    TxCollectionImpl(std::vector<Wtxid> wtxids, const NodeContext& node)
+        : m_collected_txs(std::move(wtxids), node)
+    {
+    }
+
+private:
+    node::TxCollection m_collected_txs;
+};
+
 class MinerImpl : public Mining
 {
 public:
@@ -1059,6 +1071,11 @@ public:
             results.emplace_back(m_node.mempool->get(wtxid));
         }
         return results;
+    }
+
+    std::unique_ptr<interfaces::TxCollection> collectTxs(const std::vector<Wtxid>& wtxids) override
+    {
+        return std::make_unique<TxCollectionImpl>(wtxids, m_node);
     }
 
     const NodeContext* context() override { return &m_node; }

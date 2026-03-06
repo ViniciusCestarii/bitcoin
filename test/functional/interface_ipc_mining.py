@@ -42,6 +42,7 @@ from test_framework.ipc_util import (
     destroying,
     load_capnp_modules,
     make_mining_ctx,
+    mining_collect_txs,
     mining_create_block_template,
     mining_get_block,
     mining_get_coinbase_tx,
@@ -313,6 +314,35 @@ class IPCMiningTest(BitcoinTestFramework):
                     template7 = await mining_wait_next_template(template6, stack, ctx, new_waitoptions)
                     assert template7 is None
                 await wait_and_do(wait_for_block(), template6.interruptWait())
+
+        asyncio.run(capnp.run(async_routine()))
+
+    def run_tx_collection_test(self):
+        """Test TxCollection behavior."""
+        self.log.info("Running TxCollection test")
+
+        async def async_routine():
+            ctx0, mining0 = await make_mining_ctx(self)
+
+            self.log.debug("collectTxs() should reject duplicate wtxids")
+            try:
+                await mining0.collectTxs(ctx0, [ser_uint256(1), ser_uint256(1)])
+                raise AssertionError("collectTxs unexpectedly accepted duplicate wtxids")
+            except capnp.lib.capnp.KjException as e:
+                assert_equal(e.description, f"remote exception: std::exception: duplicate wtxid {ser_uint256(1)[::-1].hex()}")
+                assert_equal(e.type, "FAILED")
+
+            self.log.debug("Create and destroy an empty collection")
+            async with destroying((await mining0.collectTxs(ctx0, [])).result, ctx0):
+                pass
+
+            self.log.debug("Run the TxCollection workflow")
+            node = self.nodes[0]
+            tx = self.miniwallet.send_self_transfer(from_node=node)
+            async with AsyncExitStack() as stack:
+                await mining_collect_txs(mining0, stack, ctx0, [tx["tx"].wtxid])
+            # Confirm the transaction so it does not leak into later test phases.
+            self.generate(node, 1)
 
         asyncio.run(capnp.run(async_routine()))
 
@@ -757,6 +787,7 @@ class IPCMiningTest(BitcoinTestFramework):
         self.run_mining_interface_test()
         self.run_early_startup_test()
         self.run_block_template_test()
+        self.run_tx_collection_test()
         self.run_coinbase_and_submission_test()
         self.run_waitnext_mining_policy_test()
         self.run_block_max_weight_test()

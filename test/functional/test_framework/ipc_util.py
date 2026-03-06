@@ -117,6 +117,11 @@ async def mining_create_block_template(mining, stack, ctx, *args, **kwargs):
     return await stack.enter_async_context(destroying(response.result, ctx))
 
 
+async def mining_collect_txs(mining, stack, ctx, wtxids):
+    """Call mining.collectTxs() and return collection, then destroy when stack exits."""
+    return await stack.enter_async_context(destroying((await mining.collectTxs(ctx, wtxids)).result, ctx))
+
+
 async def mining_wait_next_template(template, stack, ctx, opts):
     """Call template.waitNext() and return template, then call template.destroy() when stack exits."""
     response = await template.waitNext(ctx, opts)
