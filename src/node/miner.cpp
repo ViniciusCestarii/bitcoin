@@ -62,6 +62,7 @@ TxCollection::TxCollection(std::vector<Wtxid> wtxids, const NodeContext& node)
     : m_wtxids(std::move(wtxids)),
       m_node(node)
 {
+    LOCK(m_mutex);
     CTxMemPool& mempool{*Assert(m_node.mempool)};
     LOCK(mempool.cs);
     for (const auto& wtxid : m_wtxids) {
@@ -75,6 +76,7 @@ TxCollection::TxCollection(std::vector<Wtxid> wtxids, const NodeContext& node)
 
 std::vector<uint32_t> TxCollection::UnknownTxPos() const
 {
+    LOCK(m_mutex);
     std::vector<uint32_t> result;
     for (size_t i{0}; i < m_wtxids.size(); ++i) {
         // Every requested wtxid is a key (added in the constructor), so at()
@@ -82,6 +84,20 @@ std::vector<uint32_t> TxCollection::UnknownTxPos() const
         if (!m_transactions.at(m_wtxids[i])) result.push_back(static_cast<uint32_t>(i));
     }
     return result;
+}
+
+void TxCollection::AddMissingTxs(const std::vector<CTransactionRef>& txs)
+{
+    LOCK(m_mutex);
+    for (const auto& tx : txs) {
+        if (!tx) throw std::runtime_error("unexpected null transaction");
+        const auto it{m_transactions.find(tx->GetWitnessHash())};
+        if (it == m_transactions.end()) {
+            throw std::runtime_error(strprintf("unexpected wtxid %s", tx->GetWitnessHash().ToString()));
+        }
+        if (it->second) continue;
+        it->second = tx;
+    }
 }
 
 int64_t GetMinimumTime(const CBlockIndex* pindexPrev, const int64_t difficulty_adjustment_interval)

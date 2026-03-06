@@ -374,12 +374,25 @@ class IPCMiningTest(BitcoinTestFramework):
                 assert_equal([tx.wtxid_hex for tx in remote_block.vtx[1:]], [shared_tx["wtxid"], missing_tx["wtxid"]])
 
                 requested_wtxids = [tx.wtxid for tx in remote_block.vtx[1:]]
+                raw_txs = [tx.serialize() for tx in remote_block.vtx[1:]]
                 tx_collection = await mining_collect_txs(mining0, stack, ctx0, requested_wtxids)
 
                 # The first transaction is already in node's mempool, but
                 # the child transaction only exists on the disconnected
                 # remote node.
                 assert_equal(await tx_collection_unknown_pos(tx_collection, ctx0), [1])
+
+                self.log.debug("Reject unexpected transactions in addMissingTxs(), without undoing earlier additions")
+                unexpected_tx = remote_wallet.create_self_transfer(fee_rate=10, confirmed_only=True)
+                try:
+                    await tx_collection.addMissingTxs(ctx0, [raw_txs[1], unexpected_tx["tx"].serialize()])
+                    raise AssertionError("addMissingTxs unexpectedly accepted an unknown wtxid")
+                except capnp.lib.capnp.KjException as e:
+                    assert_equal(e.description, f"remote exception: std::exception: unexpected wtxid {unexpected_tx['wtxid']}")
+                    assert_equal(e.type, "FAILED")
+                # The missing transaction should stay added even though the
+                # later unexpected one causes the call to fail.
+                assert_equal(await tx_collection_unknown_pos(tx_collection, ctx0), [])
 
             self.connect_nodes(0, 1)
             self.generate(remote_node, 1, sync_fun=self.no_op)
