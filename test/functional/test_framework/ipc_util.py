@@ -130,6 +130,10 @@ async def mining_wait_next_template(template, stack, ctx, opts):
     return await stack.enter_async_context(destroying(response.result, ctx))
 
 
+async def tx_collection_unknown_pos(tx_collection, ctx):
+    return list((await tx_collection.unknownTxPos(ctx)).result)
+
+
 async def mining_get_block(block_template, ctx):
     block_data = BytesIO((await block_template.getBlock(ctx)).result)
     block = CBlock()
