@@ -204,8 +204,19 @@ public:
     std::vector<uint32_t> UnknownTxPos() const EXCLUSIVE_LOCKS_REQUIRED(!m_mutex);
     /** Add transactions matching previously requested wtxids. Throws on null or unexpected transactions. */
     void AddMissingTxs(const std::vector<CTransactionRef>& txs) EXCLUSIVE_LOCKS_REQUIRED(!m_mutex);
+    /**
+     * Assemble and validate a block template from the collected transactions.
+     * If @p coinbase is provided the block is validated with it, otherwise a
+     * node-generated dummy coinbase is used.
+     */
+    std::unique_ptr<CBlockTemplate> MakeTemplate(const uint256& prevhash,
+                                                 const CTransactionRef& coinbase,
+                                                 std::string& reason,
+                                                 std::string& debug) EXCLUSIVE_LOCKS_REQUIRED(!m_mutex);
 
 private:
+    std::vector<uint32_t> UnknownTxPosInternal() const EXCLUSIVE_LOCKS_REQUIRED(m_mutex);
+
     /** Requested transaction order as provided by the client. */
     const std::vector<Wtxid> m_wtxids;
     /** Protects m_transactions: IPC clients may call methods concurrently
