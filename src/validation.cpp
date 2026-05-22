@@ -2926,6 +2926,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
   */
 bool Chainstate::DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool)
 {
+    AssertLockHeld(m_chainstate_mutex);
     AssertLockHeld(cs_main);
     if (m_mempool) AssertLockHeld(m_mempool->cs);
 
@@ -3007,6 +3008,7 @@ bool Chainstate::ConnectTip(
     std::vector<ConnectedBlock>& connected_blocks,
     DisconnectedBlockTransactions& disconnectpool)
 {
+    AssertLockHeld(m_chainstate_mutex);
     AssertLockHeld(cs_main);
     if (m_mempool) AssertLockHeld(m_mempool->cs);
 
@@ -3181,6 +3183,7 @@ void Chainstate::PruneBlockIndexCandidates() {
  */
 bool Chainstate::ActivateBestChainStep(BlockValidationState& state, CBlockIndex& index_most_work, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, std::vector<ConnectedBlock>& connected_blocks)
 {
+    AssertLockHeld(m_chainstate_mutex);
     AssertLockHeld(cs_main);
     if (m_mempool) AssertLockHeld(m_mempool->cs);
 
