@@ -78,7 +78,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -88,6 +87,7 @@ using interfaces::BlockRef;
 using interfaces::BlockTemplate;
 using interfaces::BlockTip;
 using interfaces::Chain;
+using interfaces::ExternalBlockTemplate;
 using interfaces::FoundBlock;
 using interfaces::Handler;
 using interfaces::MakeSignalHandler;
@@ -876,16 +876,23 @@ public:
     NodeContext& m_node;
 };
 
+static bool SubmitTemplateSolution(ChainstateManager& chainman, CBlockTemplate& block_template, uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase)
+{
+    if (!coinbase) return false;
+    AddMerkleRootAndCoinbase(block_template.block, std::move(coinbase), version, timestamp, nonce);
+    std::string reason;
+    std::string debug;
+    return SubmitBlock(chainman, std::make_shared<const CBlock>(block_template.block), /*new_block=*/nullptr, reason, debug);
+}
+
 class BlockTemplateImpl : public BlockTemplate
 {
 public:
     explicit BlockTemplateImpl(BlockCreateOptions create_options,
                                std::unique_ptr<CBlockTemplate> block_template,
-                               const NodeContext& node,
-                               bool external = false) : m_create_options(std::move(create_options)),
-                                                        m_block_template(std::move(block_template)),
-                                                        m_external(external),
-                                                        m_node(node)
+                               const NodeContext& node) : m_create_options(std::move(create_options)),
+                                                          m_block_template(std::move(block_template)),
+                                                          m_node(node)
     {
         assert(m_block_template);
     }
@@ -900,24 +907,6 @@ public:
         return m_block_template->block;
     }
 
-    std::vector<CAmount> getTxFees() override
-    {
-        if (m_external) throw std::runtime_error("getTxFees is unavailable for externally generated templates");
-        return m_block_template->vTxFees;
-    }
-
-    std::vector<int64_t> getTxSigops() override
-    {
-        if (m_external) throw std::runtime_error("getTxSigops is unavailable for externally generated templates");
-        return m_block_template->vTxSigOpsCost;
-    }
-
-    CoinbaseTx getCoinbaseTx() override
-    {
-        if (m_external) throw std::runtime_error("getCoinbaseTx is unavailable for externally generated templates");
-        return m_block_template->m_coinbase_tx;
-    }
-
     std::vector<uint256> getCoinbaseMerklePath() override
     {
         return TransactionMerklePath(m_block_template->block, 0);
@@ -925,16 +914,26 @@ public:
 
     bool submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase) override
     {
-        if (!coinbase) return false;
-        AddMerkleRootAndCoinbase(m_block_template->block, std::move(coinbase), version, timestamp, nonce);
-        std::string reason;
-        std::string debug;
-        return SubmitBlock(chainman(), std::make_shared<const CBlock>(m_block_template->block), /*new_block=*/nullptr, reason, debug);
+        return SubmitTemplateSolution(chainman(), *m_block_template, version, timestamp, nonce, std::move(coinbase));
+    }
+
+    std::vector<CAmount> getTxFees() override
+    {
+        return m_block_template->vTxFees;
+    }
+
+    std::vector<int64_t> getTxSigops() override
+    {
+        return m_block_template->vTxSigOpsCost;
+    }
+
+    CoinbaseTx getCoinbaseTx() override
+    {
+        return m_block_template->m_coinbase_tx;
     }
 
     std::unique_ptr<BlockTemplate> waitNext(BlockWaitOptions options) override
     {
-        if (m_external) throw std::runtime_error("waitNext is unavailable for externally generated templates");
         auto new_template = WaitAndCreateNewBlock(chainman(),
                                                   notifications(),
                                                   m_node.mempool.get(),
@@ -942,7 +941,7 @@ public:
                                                   /*wait_options=*/options,
                                                   /*create_options=*/m_create_options,
                                                   /*interrupt_wait=*/m_interrupt_wait);
-        if (new_template) return std::make_unique<BlockTemplateImpl>(m_create_options, std::move(new_template), m_node, m_external);
+        if (new_template) return std::make_unique<BlockTemplateImpl>(m_create_options, std::move(new_template), m_node);
         return nullptr;
     }
 
@@ -952,13 +951,45 @@ public:
     }
 
     const BlockCreateOptions m_create_options;
-
     const std::unique_ptr<CBlockTemplate> m_block_template;
-
-    const bool m_external;
     bool m_interrupt_wait{false};
     ChainstateManager& chainman() { return *Assert(m_node.chainman); }
     KernelNotifications& notifications() { return *Assert(m_node.notifications); }
+    const NodeContext& m_node;
+};
+
+class ExternalBlockTemplateImpl : public ExternalBlockTemplate
+{
+public:
+    explicit ExternalBlockTemplateImpl(std::unique_ptr<CBlockTemplate> block_template,
+                                       const NodeContext& node) : m_block_template(std::move(block_template)),
+                                                                  m_node(node)
+    {
+        assert(m_block_template);
+    }
+
+    CBlockHeader getBlockHeader() override
+    {
+        return m_block_template->block;
+    }
+
+    CBlock getBlock() override
+    {
+        return m_block_template->block;
+    }
+
+    std::vector<uint256> getCoinbaseMerklePath() override
+    {
+        return TransactionMerklePath(m_block_template->block, 0);
+    }
+
+    bool submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase) override
+    {
+        return SubmitTemplateSolution(chainman(), *m_block_template, version, timestamp, nonce, std::move(coinbase));
+    }
+
+    const std::unique_ptr<CBlockTemplate> m_block_template;
+    ChainstateManager& chainman() { return *Assert(m_node.chainman); }
     const NodeContext& m_node;
 };
 
@@ -981,17 +1012,17 @@ public:
         m_collected_txs.AddMissingTxs(txs);
     }
 
-    std::unique_ptr<BlockTemplate> makeTemplate(uint256 prevhash,
-                                                CTransactionRef coinbase,
-                                                std::string& reason,
-                                                std::string& debug) override
+    std::unique_ptr<ExternalBlockTemplate> makeTemplate(uint256 prevhash,
+                                                        CTransactionRef coinbase,
+                                                        std::string& reason,
+                                                        std::string& debug) override
     {
         auto block_template{m_collected_txs.MakeTemplate(prevhash, coinbase, reason, debug)};
         // Mirror submitBlock(): a missing template must set a rejection
         // reason, and a successful one must not.
         Assume(block_template == nullptr ? !reason.empty() : reason.empty());
         if (!block_template) return nullptr;
-        return std::make_unique<BlockTemplateImpl>(BlockCreateOptions{}, std::move(block_template), m_node, /*external=*/true);
+        return std::make_unique<ExternalBlockTemplateImpl>(std::move(block_template), m_node);
     }
 
 private:

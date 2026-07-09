@@ -25,27 +25,19 @@ struct NodeContext;
 
 namespace interfaces {
 
-//! Block template interface
-class BlockTemplate
+/**
+ * Block template interface shared by node-generated and externally generated
+ * (TxCollection::makeTemplate()) templates.
+ */
+class ExternalBlockTemplate
 {
 public:
-    virtual ~BlockTemplate() = default;
+    virtual ~ExternalBlockTemplate() = default;
 
     virtual CBlockHeader getBlockHeader() = 0;
     // Block contains a dummy coinbase transaction that should not be used and
     // it may not match a transaction constructed from getCoinbaseTx().
     virtual CBlock getBlock() = 0;
-
-    // Fees per transaction, not including coinbase transaction. Throws for
-    // externally generated templates.
-    virtual std::vector<CAmount> getTxFees() = 0;
-    // Sigop cost per transaction, not including coinbase transaction. Throws
-    // for externally generated templates.
-    virtual std::vector<int64_t> getTxSigops() = 0;
-
-    /** Return fields needed to construct a coinbase transaction.
-     * Throws for externally generated templates. */
-    virtual node::CoinbaseTx getCoinbaseTx() = 0;
 
     /**
      * Compute merkle path to the coinbase transaction
@@ -79,6 +71,19 @@ public:
      *       (e.g. both the miner who constructed the template and the pool).
      */
     virtual bool submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase) = 0;
+};
+
+//! Block template interface for node-generated templates.
+class BlockTemplate : public ExternalBlockTemplate
+{
+public:
+    // Fees per transaction, not including coinbase transaction.
+    virtual std::vector<CAmount> getTxFees() = 0;
+    // Sigop cost per transaction, not including coinbase transaction.
+    virtual std::vector<int64_t> getTxSigops() = 0;
+
+    /** Return fields needed to construct a coinbase transaction */
+    virtual node::CoinbaseTx getCoinbaseTx() = 0;
 
     /**
      * Waits for fees in the next block to rise, a new tip or the timeout.
@@ -90,8 +95,6 @@ public:
      *
      * On testnet this will additionally return a template with difficulty 1 if
      * the tip is more than 20 minutes old.
-     *
-     * Throws for externally generated templates.
      */
     virtual std::unique_ptr<BlockTemplate> waitNext(node::BlockWaitOptions options = {}) = 0;
 
@@ -160,7 +163,7 @@ public:
      * @param[out] debug   more detailed rejection reason
      * @returns            block template on success, otherwise nullptr
      */
-    virtual std::unique_ptr<BlockTemplate> makeTemplate(uint256 prevhash,
+    virtual std::unique_ptr<ExternalBlockTemplate> makeTemplate(uint256 prevhash,
                                                         CTransactionRef coinbase,
                                                         std::string& reason,
                                                         std::string& debug) = 0;

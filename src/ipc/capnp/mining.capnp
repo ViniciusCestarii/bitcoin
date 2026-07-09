@@ -35,20 +35,23 @@ interface TxCollection $Proxy.wrap("interfaces::TxCollection") {
     destroy @0 (context :Proxy.Context) -> ();
     unknownTxPos @1 (context: Proxy.Context) -> (result: List(UInt32));
     addMissingTxs @2 (context: Proxy.Context, txs: List(Data)) -> ();
-    makeTemplate @3 (context: Proxy.Context, prevhash: Data, coinbase: Data) -> (reason: Text, debug: Text, result: BlockTemplate);
+    makeTemplate @3 (context: Proxy.Context, prevhash: Data, coinbase: Data) -> (reason: Text, debug: Text, result: ExternalBlockTemplate);
 }
 
-interface BlockTemplate $Proxy.wrap("interfaces::BlockTemplate") {
+interface ExternalBlockTemplate $Proxy.wrap("interfaces::ExternalBlockTemplate") {
     destroy @0 (context :Proxy.Context) -> ();
     getBlockHeader @1 (context: Proxy.Context) -> (result: Data);
     getBlock @2 (context: Proxy.Context) -> (result: Data);
-    getTxFees @3 (context: Proxy.Context) -> (result: List(Int64));
-    getTxSigops @4 (context: Proxy.Context) -> (result: List(Int64));
-    getCoinbaseTx @5 (context: Proxy.Context) -> (result: CoinbaseTx);
-    getCoinbaseMerklePath @6 (context: Proxy.Context) -> (result: List(Data));
-    submitSolution @7 (context: Proxy.Context, version: UInt32, timestamp: UInt32, nonce: UInt32, coinbase :Data) -> (result: Bool);
-    waitNext @8 (context: Proxy.Context, options: BlockWaitOptions) -> (result: BlockTemplate);
-    interruptWait @9() -> ();
+    getCoinbaseMerklePath @3 (context: Proxy.Context) -> (result: List(Data));
+    submitSolution @4 (context: Proxy.Context, version: UInt32, timestamp: UInt32, nonce: UInt32, coinbase :Data) -> (result: Bool);
+}
+
+interface BlockTemplate extends(ExternalBlockTemplate) $Proxy.wrap("interfaces::BlockTemplate") {
+    getTxFees @0 (context: Proxy.Context) -> (result: List(Int64));
+    getTxSigops @1 (context: Proxy.Context) -> (result: List(Int64));
+    getCoinbaseTx @2 (context: Proxy.Context) -> (result: CoinbaseTx);
+    waitNext @3 (context: Proxy.Context, options: BlockWaitOptions) -> (result: BlockTemplate);
+    interruptWait @4() -> ();
 }
 
 struct BlockCreateOptions $Proxy.wrap("node::BlockCreateOptions") {
