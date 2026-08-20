@@ -1843,6 +1843,11 @@ static bool ExecuteWitnessScript(const std::span<const valtype>& stack_span, con
 {
     std::vector<valtype> stack{stack_span.begin(), stack_span.end()};
 
+    // Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
+    for (const valtype& elem : stack) {
+        if (elem.size() > MAX_SCRIPT_ELEMENT_SIZE) return set_error(serror, SCRIPT_ERR_PUSH_SIZE);
+    }
+
     if (sigversion == SigVersion::TAPSCRIPT) {
         // OP_SUCCESSx processing overrides everything, including stack element size limits
         CScript::const_iterator pc = exec_script.begin();
@@ -1863,11 +1868,6 @@ static bool ExecuteWitnessScript(const std::span<const valtype>& stack_span, con
 
         // Tapscript enforces initial stack size limits (altstack is empty here)
         if (stack.size() > MAX_STACK_SIZE) return set_error(serror, SCRIPT_ERR_STACK_SIZE);
-    }
-
-    // Disallow stack item size > MAX_SCRIPT_ELEMENT_SIZE in witness stack
-    for (const valtype& elem : stack) {
-        if (elem.size() > MAX_SCRIPT_ELEMENT_SIZE) return set_error(serror, SCRIPT_ERR_PUSH_SIZE);
     }
 
     // Run the script interpreter.
