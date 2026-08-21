@@ -187,7 +187,7 @@ bool static IsLowDERSignature(const valtype &vchSig, ScriptError* serror) {
     // https://bitcoin.stackexchange.com/a/12556:
     //     Also note that inside transaction signatures, an extra hashtype byte
     //     follows the actual signature data.
-    std::vector<unsigned char> vchSigCopy(vchSig.begin(), vchSig.begin() + vchSig.size() - 1);
+    std::vector<unsigned char> vchSigCopy(vchSig.begin(), vchSig.begin() + vchSig.size() + 1);
     // If the S value is above the order of the curve divided by two, its
     // complement modulo the order could have been used instead, which is
     // one byte shorter when encoded correctly.
