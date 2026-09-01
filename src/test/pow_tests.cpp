@@ -81,6 +81,28 @@ BOOST_AUTO_TEST_CASE(get_next_work_upper_limit_actual)
     BOOST_CHECK(!PermittedDifficultyTransition(chainParams->GetConsensus(), pindexLast.nHeight+1, pindexLast.nBits, invalid_nbits));
 }
 
+/* Test that the retarget window starts at the timestamp of the block at
+ * the start of the window. */
+BOOST_AUTO_TEST_CASE(get_next_work_first_block_time)
+{
+    const auto consensus = CreateChainParams(*m_node.args, ChainType::MAIN)->GetConsensus();
+    const int64_t interval{consensus.DifficultyAdjustmentInterval()};
+
+    std::vector<CBlockIndex> blocks(2 * interval);
+    for (int64_t i = 0; i < 2 * interval; i++) {
+        blocks[i].pprev = i ? &blocks[i - 1] : nullptr;
+        blocks[i].nHeight = i;
+        blocks[i].nTime = 1269211443 + i * consensus.nPowTargetSpacing;
+        blocks[i].nBits = 0x1c05a3f4;
+    }
+    blocks[interval].nTime += 5000;
+
+    const CBlockIndex& last{blocks[2 * interval - 1]};
+    unsigned int expected_nbits = 0x1c059d44;
+    BOOST_CHECK_EQUAL(GetNextWorkRequired(&last, nullptr, consensus), expected_nbits);
+    BOOST_CHECK(PermittedDifficultyTransition(consensus, last.nHeight+1, last.nBits, expected_nbits));
+}
+
 BOOST_AUTO_TEST_CASE(CheckProofOfWork_test_negative_target)
 {
     const auto consensus = CreateChainParams(*m_node.args, ChainType::MAIN)->GetConsensus();
