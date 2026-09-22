@@ -253,6 +253,12 @@ class MiningTest(BitcoinTestFramework):
         bad_block.solve()
         node.submitheader(hexdata=CBlockHeader(bad_block).serialize().hex())
 
+        self.log.info("Timewarp protection is not enforced without BIP94")
+        self.restart_node(0, extra_args=[f'-mocktime={t}'])
+        bad_block.nTime = t
+        bad_block.solve()
+        node.submitheader(hexdata=CBlockHeader(bad_block).serialize().hex())
+
     def test_murch_zawy_mintime(self):
         self.log.info("Test that GetMinimumTime accounts for the Murch-Zawy rule (BIP54)")
         node = self.nodes[0]
