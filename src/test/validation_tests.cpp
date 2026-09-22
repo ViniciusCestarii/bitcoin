@@ -357,6 +357,20 @@ BOOST_AUTO_TEST_CASE(block_malleation)
             block.hashMerkleRoot = BlockMerkleRoot(block);
         }
         BOOST_CHECK(is_mutated(block, /*check_witness_root=*/true));
+
+        // A single reserved value of the wrong size is mutated, even if the
+        // commitment is computed over it.
+        {
+            const std::vector<unsigned char> reserved_value(31, 0x00);
+            CMutableTransaction mtx{*block.vtx[0]};
+            mtx.vin[0].scriptWitness.stack = {reserved_value};
+            uint256 commitment{BlockWitnessMerkleRoot(block)};
+            CHash256().Write(commitment).Write(reserved_value).Finalize(commitment);
+            memcpy(&mtx.vout[0].scriptPubKey[6], commitment.begin(), 32);
+            block.vtx[0] = MakeTransactionRef(mtx);
+            block.hashMerkleRoot = BlockMerkleRoot(block);
+        }
+        BOOST_CHECK(is_mutated(block, /*check_witness_root=*/true));
     }
 }
 
