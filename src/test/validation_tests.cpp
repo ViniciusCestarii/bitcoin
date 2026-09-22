@@ -349,6 +349,16 @@ BOOST_AUTO_TEST_CASE(block_malleation)
         }
         BOOST_CHECK(is_not_mutated(block, /*check_witness_root=*/true));
 
+        // All 32 bytes of the witness commitment are checked, including the last one.
+        {
+            CBlock block_copy{block};
+            CMutableTransaction mtx{*block_copy.vtx[0]};
+            ++mtx.vout[0].scriptPubKey[6 + 31];
+            block_copy.vtx[0] = MakeTransactionRef(mtx);
+            block_copy.hashMerkleRoot = BlockMerkleRoot(block_copy);
+            BOOST_CHECK(is_mutated(block_copy, /*check_witness_root=*/true));
+        }
+
         // Test malleating the coinbase witness reserved value
         {
             CMutableTransaction mtx{*block.vtx[0]};
