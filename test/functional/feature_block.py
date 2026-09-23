@@ -1286,6 +1286,14 @@ class FullBlockTest(BitcoinTestFramework):
         b_cb34.solve()
         self.send_blocks([b_cb34], success=False, reject_reason='bad-cb-height', reconnect=True)
 
+        # The height must be at the start of the coinbase scriptSig, not just contained in it
+        self.move_tip(87)
+        b_cb34_prefix = self.next_block('b_cb34_prefix')
+        b_cb34_prefix.vtx[0].vin[0].scriptSig = b'\x00' + bytes(b_cb34_prefix.vtx[0].vin[0].scriptSig)
+        b_cb34_prefix.hashMerkleRoot = b_cb34_prefix.calc_merkle_root()
+        b_cb34_prefix.solve()
+        self.send_blocks([b_cb34_prefix], success=False, reject_reason='bad-cb-height', reconnect=True)
+
         # Don't use v2transport for the large reorg, which is too slow with the unoptimized python ChaCha20 implementation
         if self.options.v2transport:
             self.nodes[0].disconnect_p2ps()
