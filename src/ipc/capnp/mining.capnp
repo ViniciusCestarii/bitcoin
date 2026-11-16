@@ -30,6 +30,11 @@ interface Mining $Proxy.wrap("interfaces::Mining") {
     getTransactionsByWitnessID @9 (context :Proxy.Context, wtxids: List(Data)) -> (result: List(Data));
 }
 
+interface SubmittedBlock $Proxy.wrap("interfaces::SubmittedBlock") {
+    destroy @0 (context :Proxy.Context) -> ();
+    getBlock @1 (context: Proxy.Context) -> (result: Data);
+}
+
 interface BlockTemplate $Proxy.wrap("interfaces::BlockTemplate") {
     destroy @0 (context :Proxy.Context) -> ();
     getBlockHeader @1 (context: Proxy.Context) -> (result: Data);
@@ -38,7 +43,7 @@ interface BlockTemplate $Proxy.wrap("interfaces::BlockTemplate") {
     getTxSigops @4 (context: Proxy.Context) -> (result: List(Int64));
     getCoinbaseTx @5 (context: Proxy.Context) -> (result: CoinbaseTx);
     getCoinbaseMerklePath @6 (context: Proxy.Context) -> (result: List(Data));
-    submitSolution @10 (context: Proxy.Context, version: UInt32, timestamp: UInt32, nonce: UInt32, coinbase :Data) -> (reason: Text, debug: Text, result: Bool);
+    submitSolution @10 (context: Proxy.Context, version: UInt32, timestamp: UInt32, nonce: UInt32, coinbase :Data) -> (reason: Text, debug: Text, accepted: Bool, result: SubmittedBlock);
     waitNext @8 (context: Proxy.Context, options: BlockWaitOptions) -> (result: BlockTemplate);
     interruptWait @9() -> ();
     getTotalFees @11 (context: Proxy.Context) -> (result: Int64);

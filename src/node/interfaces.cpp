@@ -80,6 +80,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -95,6 +96,7 @@ using interfaces::MakeSignalHandler;
 using interfaces::Mining;
 using interfaces::Node;
 using interfaces::Rpc;
+using interfaces::SubmittedBlock;
 using interfaces::WalletLoader;
 using kernel::ChainstateRole;
 using node::BlockCreateOptions;
@@ -872,6 +874,20 @@ public:
     NodeContext& m_node;
 };
 
+class SubmittedBlockImpl : public SubmittedBlock
+{
+public:
+    explicit SubmittedBlockImpl(std::shared_ptr<const CBlock> block) : m_block(std::move(block)) {}
+
+    CBlock getBlock() override
+    {
+        return *m_block;
+    }
+
+private:
+    const std::shared_ptr<const CBlock> m_block;
+};
+
 class BlockTemplateImpl : public BlockTemplate
 {
 public:
@@ -884,63 +900,51 @@ public:
         assert(m_block_template);
     }
 
-    CBlockHeader getBlockHeader() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    CBlockHeader getBlockHeader() override
     {
-        LOCK(m_mutex);
         return m_block_template->block;
     }
 
-    CBlock getBlock() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    CBlock getBlock() override
     {
-        LOCK(m_mutex);
         return m_block_template->block;
     }
 
-    std::vector<CAmount> getTxFees() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    std::vector<CAmount> getTxFees() override
     {
-        LOCK(m_mutex);
         return m_block_template->vTxFees;
     }
 
-    CAmount getTotalFees() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    CAmount getTotalFees() override
     {
-        LOCK(m_mutex);
         return m_block_template->m_total_fees;
     }
 
-    std::vector<int64_t> getTxSigops() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    std::vector<int64_t> getTxSigops() override
     {
-        LOCK(m_mutex);
         return m_block_template->vTxSigOpsCost;
     }
 
-    CoinbaseTx getCoinbaseTx() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    CoinbaseTx getCoinbaseTx() override
     {
-        LOCK(m_mutex);
         return m_block_template->m_coinbase_tx;
     }
 
-    std::vector<uint256> getCoinbaseMerklePath() override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    std::vector<uint256> getCoinbaseMerklePath() override
     {
-        LOCK(m_mutex);
         return TransactionMerklePath(m_block_template->block, 0);
     }
 
-    bool submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase, std::string& reason, std::string& debug) override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    std::unique_ptr<SubmittedBlock> submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase, std::string& reason, std::string& debug, bool& accepted) override
     {
-        if (!coinbase) return false;
-        std::shared_ptr<const CBlock> block;
-        {
-            LOCK(m_mutex);
-            AddMerkleRootAndCoinbase(m_block_template->block, std::move(coinbase), version, timestamp, nonce);
-            // Copy so later submissions cannot modify the block being validated.
-            block = std::make_shared<const CBlock>(m_block_template->block);
-        }
-        // Release the template mutex before validation acquires other locks or invokes callbacks.
-        return block_template_manager().SubmitBlock(block, reason, debug);
+        if (!coinbase) throw std::invalid_argument("Coinbase transaction must not be null");
+        auto block{std::make_shared<CBlock>(m_block_template->block)};
+        AddMerkleRootAndCoinbase(*block, std::move(coinbase), version, timestamp, nonce);
+        accepted = block_template_manager().SubmitBlock(block, reason, debug);
+        return std::make_unique<SubmittedBlockImpl>(std::move(block));
     }
 
-    std::unique_ptr<BlockTemplate> waitNext(BlockWaitOptions options) override EXCLUSIVE_LOCKS_REQUIRED(!m_mutex)
+    std::unique_ptr<BlockTemplate> waitNext(BlockWaitOptions options) override
     {
         auto new_template = block_template_manager().WaitAndCreateNewBlock(
             getBlockHeader().hashPrevBlock, getTotalFees(), options, m_create_options, m_interrupt_wait);
@@ -954,9 +958,8 @@ public:
     }
 
 private:
-    Mutex m_mutex;
     const BlockCreateOptions m_create_options;
-    const std::unique_ptr<CBlockTemplate> m_block_template GUARDED_BY(m_mutex);
+    const std::unique_ptr<const CBlockTemplate> m_block_template;
 
     bool m_interrupt_wait{false};
     node::BlockTemplateManager& block_template_manager() { return *Assert(m_node.block_template_manager); }

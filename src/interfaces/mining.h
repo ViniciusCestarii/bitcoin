@@ -26,6 +26,17 @@ struct NodeContext;
 
 namespace interfaces {
 
+//! Block submitted with BlockTemplate::submitSolution(). Holding it keeps the
+//! block available, so clients can fetch it later, off the hot path.
+class SubmittedBlock
+{
+public:
+    virtual ~SubmittedBlock() = default;
+
+    //! Return the submitted block, including the solution.
+    virtual CBlock getBlock() = 0;
+};
+
 //! Block template interface
 class BlockTemplate
 {
@@ -34,13 +45,9 @@ public:
 
     virtual CBlockHeader getBlockHeader() = 0;
     /**
-     * Return the current block. Initially, it contains a dummy coinbase transaction
+     * Return the template block. It contains a dummy coinbase transaction
      * that should not be used and may not match a transaction constructed from
-     * getCoinbaseTx().
-     *
-     * To retrieve the block updated by submitSolution(), wait for that call to
-     * return before calling getBlock(). Concurrent calls to submitSolution() may
-     * replace the block again.
+     * getCoinbaseTx(). The template is unchanged by submitSolution().
      */
     virtual CBlock getBlock() = 0;
 
@@ -63,8 +70,9 @@ public:
     virtual std::vector<uint256> getCoinbaseMerklePath() = 0;
 
     /**
-     * Construct and broadcast the block. Modifies the template in place,
+     * Construct and broadcast a block from a copy of the template,
      * updating the fields listed below as well as the merkle root.
+     * The template itself is unchanged.
      *
      * @param[in] version version block header field
      * @param[in] timestamp time block header field (unix timestamp)
@@ -72,6 +80,7 @@ public:
      * @param[in] coinbase complete coinbase transaction (including witness)
      * @param[out] reason failure reason (BIP22)
      * @param[out] debug  more detailed rejection reason
+     * @param[out] accepted true if accepted as a new block
      *
      * @note Unlike the submitblock RPC, this method does not call
      *       UpdateUncommittedBlockStructures to add a missing coinbase witness
@@ -82,9 +91,14 @@ public:
      *       is only one byte long, so the coinbase scriptSig needs at least
      *       one additional byte of data to avoid bad-cb-length.
      *
-     * @returns true if the block was accepted as a new block
+     * @returns a handle to the submitted block, including on rejection
+     * @throws std::invalid_argument if coinbase is null
+     *
+     * The handle is returned regardless of the validation result, so callers
+     * can preserve rejected blocks for investigation. The block itself is
+     * only transferred when the caller calls SubmittedBlock::getBlock().
      */
-    virtual bool submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase, std::string& reason, std::string& debug) = 0;
+    virtual std::unique_ptr<SubmittedBlock> submitSolution(uint32_t version, uint32_t timestamp, uint32_t nonce, CTransactionRef coinbase, std::string& reason, std::string& debug, bool& accepted) = 0;
 
     //! Deprecated older method preserved to return an explicit error for IPC
     //! clients using mining.capnp @7.
